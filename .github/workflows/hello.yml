@@ -10,4 +10,12 @@ jobs:
     steps:
       - name: Install nodejs
         run: sudo apt update && sudo apt install nodejs
-      - run: node hello.js
+
+      - name: Checkout code
+        run: actions/checkout@v3
+
+      - name: Make script executable
+        run: chmod +x ./hello.js
+
+      - name: Run script
+        run: node ./hello.js

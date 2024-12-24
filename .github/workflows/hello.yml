@@ -1,0 +1,13 @@
+name: Hello action
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install nodejs
+        run: sudo apt update && sudo apt install nodejs
+      - run: node hello.js

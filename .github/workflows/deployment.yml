@@ -1,16 +1,25 @@
-name: Build, Test, and Deploy Spring Boot Application
+name: Test
 
 on:
   push:
     branches:
       - main
 
-jobs:
-  build-test-deploy:
-    runs-on: ubuntu-latest
+env:
+  BUILD_NAME: "hello-app"
 
+jobs:
+  run:
+    name: Test simple-app image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+      pages: write
     steps:
-      - name: Checkout repository
+      - name: Check out the repo
         uses: actions/checkout@v4
 
       - name: Set up JDK 21
@@ -20,44 +29,37 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run unit tests
-        run: mvn --batch-mode clean test
-
-      - name: Build app
+      - name: Run unit tests && build
         run: mvn --batch-mode clean package -DskipTests
 
-      - name: Set JAR_FILE and FILE_NAME
-        run: |
-          JAR_FILE=$(ls target/*.jar | head -n 1)
-          echo "Found .jar file: $JAR_FILE"
-          echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV
+      - name: Build docker image
+        run: docker build -t ${{ env.BUILD_NAME }} .
 
-      - name: Remove previous app
+      - name: Run docker container
         run: |
-          PID=$(lsof -t -i:$APP_PORT || true)
-          if [ -n "$PID" ]; then
-            echo "Port $APP_PORT is busy"
-            kill -9 $PID
+          docker run --name  hello-app -d -p 8080:8080 ${{ env.BUILD_NAME }}
+          sleep 30s
+
+      - name: Test app
+        run: |
+          RESULT=`curl http://localhost:8080/api/hello`
+          echo $RESULT
+          if [ "$RESULT" == "Hello" ]
+          then
+            echo "SUCCESS"
           else
-            echo "App port isn't busy"
-          fi
-        env:
-          APP_PORT: ${{ vars.APP_PORT }}
-
-      - name: Run app
-        run: |
-          java -jar "$JAR_FILE" &
-
-      - name: Check app
-        run: |
-          echo "checUrl: $CHECK_URL"
-          RESPONSE_STATUS=$(curl --write-out "%{http_code}" --silent --output /dev/null "$CHECK_URL")
-          echo "response status: $RESPONSE_STATUS"
-          if [ "$RESPONSE_STATUS" -eq 200 ]; then
-            echo "successful with status = $RESPONSE_STATUS"
-          else
-            echo "error with status = $RESPONSE_STATUS"
+            echo "FAILURE"
             exit 1
           fi
-        env:
-          CHECK_URL: ${{ vars.CHECK_URL }}
+
+      - name: Check user
+        run: |
+          RESULT=`docker exec hello-app whoami`
+          echo $RESULT
+          if [ "$RESULT" == "tester" ]
+          then
+            echo "SUCCESS"
+          else
+            echo "FAILURE"
+            exit 1
+          fi

@@ -7,11 +7,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/check")
+@RequestMapping("/api/hello")
 public class CheckController {
 
     @GetMapping
-    public ResponseEntity<HttpStatus> check() {
-        return new ResponseEntity<>(HttpStatus.OK);
+    public ResponseEntity<String> check() {
+        return new ResponseEntity<>("Hello", HttpStatus.OK);
     }
 }
